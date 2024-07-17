@@ -45,7 +45,7 @@ pub const OneofContainer = struct {
             .a_number = fd(3, .{ .Varint = .Simple }),
             .enum_value = fd(6, .{ .Varint = .Simple }),
         };
-    },
+    } = null,
 
     pub const _desc_table = .{
         .regular_field = fd(4, .String),
@@ -65,7 +65,7 @@ pub const NestedOneofContainer = struct {
             .a = fd(5, .String),
             .b = fd(6, .{ .Varint = .Simple }),
         };
-    },
+    } = null,
 
     pub const _desc_table = .{
         .failure = fd(7, .{ .AllocMessage = {} }),
@@ -81,7 +81,7 @@ pub const NestedOneofContainer = struct {
                 .a = fd(11, .String),
                 .b = fd(12, .{ .Varint = .Simple }),
             };
-        },
+        } = null,
 
         pub const _desc_table = .{
             .buffer_address = fd(13, .{ .Varint = .Simple }),

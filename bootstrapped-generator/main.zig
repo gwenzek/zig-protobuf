@@ -416,7 +416,10 @@ const GenerationContext = struct {
         }
 
         // proto3 does not support explicit default values, the default scalar values are used instead
-        if (is_proto3) {
+        // In proto2 not all fields have default values, but the C++ implementation zero init the field
+        // in this case to avoid having undefined memory in case of a malformed wire format.
+        // So for proto3 we follow official semantics, and in proto2 we follow the C++ semantics.
+        if (is_proto3 or field.default_value == null) {
             return switch (field.type.?) {
                 .TYPE_SINT32,
                 .TYPE_SFIXED32,
@@ -440,19 +443,31 @@ const GenerationContext = struct {
             };
         }
 
-        if (field.default_value == null) return null;
-
+        const default = field.default_value.?.getSlice();
         return switch (field.type.?) {
-            .TYPE_SINT32, .TYPE_SFIXED32, .TYPE_INT32, .TYPE_UINT32, .TYPE_FIXED32, .TYPE_INT64, .TYPE_SINT64, .TYPE_SFIXED64, .TYPE_UINT64, .TYPE_FIXED64, .TYPE_BOOL => field.default_value.?.getSlice(),
-            .TYPE_FLOAT => if (std.mem.eql(u8, field.default_value.?.getSlice(), "inf")) "std.math.inf(f32)" else if (std.mem.eql(u8, field.default_value.?.getSlice(), "-inf")) "-std.math.inf(f32)" else if (std.mem.eql(u8, field.default_value.?.getSlice(), "nan")) "std.math.nan(f32)" else field.default_value.?.getSlice(),
-            .TYPE_DOUBLE => if (std.mem.eql(u8, field.default_value.?.getSlice(), "inf")) "std.math.inf(f64)" else if (std.mem.eql(u8, field.default_value.?.getSlice(), "-inf")) "-std.math.inf(f64)" else if (std.mem.eql(u8, field.default_value.?.getSlice(), "nan")) "std.math.nan(f64)" else field.default_value.?.getSlice(),
+            .TYPE_SINT32, .TYPE_SFIXED32, .TYPE_INT32, .TYPE_UINT32, .TYPE_FIXED32, .TYPE_INT64, .TYPE_SINT64, .TYPE_SFIXED64, .TYPE_UINT64, .TYPE_FIXED64, .TYPE_BOOL => default,
+            .TYPE_FLOAT => parseSpecialFloat(default, "f32"),
+            .TYPE_DOUBLE => parseSpecialFloat(default, "f64"),
             .TYPE_STRING, .TYPE_BYTES => if (field.default_value.?.isEmpty())
                 ".Empty"
             else
-                try std.mem.concat(allocator, u8, &.{ "ManagedString.static(", try formatSliceEscapeImpl(field.default_value.?.getSlice()), ")" }),
-            .TYPE_ENUM => try std.mem.concat(allocator, u8, &.{ ".", field.default_value.?.getSlice() }),
-            else => null,
+                try std.mem.concat(allocator, u8, &.{ "ManagedString.static(", try formatSliceEscapeImpl(default), ")" }),
+            .TYPE_ENUM => try std.mem.concat(allocator, u8, &.{ ".", default }),
+            .TYPE_MESSAGE => ".{}",
+            .TYPE_GROUP => @panic("Groups are deprecated and not supported in zig-protobuf"),
+            _ => @panic("Unrecognized type"),
         };
+    }
+
+    fn parseSpecialFloat(value: []const u8, comptime precision: []const u8) []const u8 {
+        return if (std.mem.eql(u8, value, "inf"))
+            std.fmt.comptimePrint("std.math.inf({s})", .{precision})
+        else if (std.mem.eql(u8, value, "-inf"))
+            std.fmt.comptimePrint("-std.math.inf({s})", .{precision})
+        else if (std.mem.eql(u8, value, "nan"))
+            std.fmt.comptimePrint("std.math.nan({s})", .{precision})
+        else
+            value;
     }
 
     fn getFieldTypeDescriptor(ctx: *Self, _: FullName, file: descriptor.FileDescriptorProto, field: descriptor.FieldDescriptorProto, is_union: bool) !string {
@@ -600,7 +615,7 @@ const GenerationContext = struct {
 
                     try list.append(
                         \\      };
-                        \\    },
+                        \\    } = null,
                         \\
                     );
                 }
@@ -657,16 +672,13 @@ pub fn formatSliceEscapeImpl(
     str: string,
 ) !string {
     const charset = "0123456789ABCDEF";
-    var buf: [4]u8 = undefined;
+    var esc_char: [4]u8 = "\\x00".*;
 
     var out = std.ArrayList(u8).init(allocator);
     defer out.deinit();
     var writer = out.writer();
 
     try writer.writeByte('"');
-
-    buf[0] = '\\';
-    buf[1] = 'x';
 
     for (str) |c| {
         if (c == '"') {
@@ -678,9 +690,9 @@ pub fn formatSliceEscapeImpl(
         } else if (std.ascii.isPrint(c)) {
             try writer.writeByte(c);
         } else {
-            buf[2] = charset[c >> 4];
-            buf[3] = charset[c & 15];
-            try writer.writeAll(&buf);
+            esc_char[2] = charset[c >> 4];
+            esc_char[3] = charset[c & 15];
+            try writer.writeAll(&esc_char);
         }
     }
     try writer.writeByte('"');

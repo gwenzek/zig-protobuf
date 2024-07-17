@@ -55,7 +55,7 @@ pub const Value = struct {
             .struct_value = fd(5, .{ .AllocMessage = {} }),
             .list_value = fd(6, .{ .AllocMessage = {} }),
         };
-    },
+    } = null,
 
     pub const _desc_table = .{
         .kind = fd(null, .{ .OneOf = std.meta.Child(std.meta.FieldType(@This(), .kind)) }),

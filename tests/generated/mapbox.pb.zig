@@ -67,7 +67,7 @@ pub const Tile = struct {
 
     pub const Layer = struct {
         version: u32 = 1,
-        name: ManagedString,
+        name: ManagedString = .Empty,
         features: ArrayListU(Tile.Feature) = .{},
         keys: ArrayListU(ManagedString) = .{},
         values: ArrayListU(Tile.Value) = .{},

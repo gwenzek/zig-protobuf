@@ -534,8 +534,8 @@ pub const UninterpretedOption = struct {
     };
 
     pub const NamePart = struct {
-        name_part: ManagedString,
-        is_extension: bool,
+        name_part: ManagedString = .Empty,
+        is_extension: bool = false,
 
         pub const _desc_table = .{
             .name_part = fd(1, .String),

@@ -382,7 +382,7 @@ pub const Graphic = struct {
             .sprite = fd(2, .{ .AllocMessage = {} }),
             .animation = fd(3, .{ .AllocMessage = {} }),
         };
-    },
+    } = null,
 
     pub const _desc_table = .{
         .id = fd(1, .{ .Varint = .Simple }),

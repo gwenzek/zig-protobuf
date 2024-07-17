@@ -44,7 +44,7 @@ pub const EnumContainer = struct {
 };
 
 pub const Simple1 = struct {
-    a_string: ManagedString,
+    a_string: ManagedString = .Empty,
     a_repeated_string: ArrayListU(ManagedString) = .{},
     a_boolean: ?bool = null,
 
@@ -58,7 +58,7 @@ pub const Simple1 = struct {
 };
 
 pub const Simple2 = struct {
-    a_string: ManagedString,
+    a_string: ManagedString = .Empty,
     a_repeated_string: ArrayListU(ManagedString) = .{},
 
     pub const _desc_table = .{
@@ -70,10 +70,10 @@ pub const Simple2 = struct {
 };
 
 pub const SpecialCases = struct {
-    normal: ManagedString,
-    default: ManagedString,
-    function: ManagedString,
-    @"var": ManagedString,
+    normal: ManagedString = .Empty,
+    default: ManagedString = .Empty,
+    function: ManagedString = .Empty,
+    @"var": ManagedString = .Empty,
 
     pub const _desc_table = .{
         .normal = fd(1, .String),
@@ -87,7 +87,7 @@ pub const SpecialCases = struct {
 
 pub const OptionalFields = struct {
     a_string: ?ManagedString = null,
-    a_bool: bool,
+    a_bool: bool = false,
     a_nested_message: ?*const OptionalFields.Nested = null,
     a_repeated_message: ArrayListU(OptionalFields.Nested) = .{},
     a_repeated_string: ArrayListU(ManagedString) = .{},
@@ -128,8 +128,8 @@ pub const HasExtensions = struct {
 };
 
 pub const Complex = struct {
-    a_string: ManagedString,
-    an_out_of_order_bool: bool,
+    a_string: ManagedString = .Empty,
+    an_out_of_order_bool: bool = false,
     a_nested_message: ?*const Complex.Nested = null,
     a_repeated_message: ArrayListU(Complex.Nested) = .{},
     a_repeated_string: ArrayListU(ManagedString) = .{},
@@ -143,7 +143,7 @@ pub const Complex = struct {
     };
 
     pub const Nested = struct {
-        an_int: i32,
+        an_int: i32 = 0,
 
         pub const _desc_table = .{
             .an_int = fd(2, .{ .Varint = .Simple }),
@@ -199,11 +199,11 @@ pub const DefaultValues = struct {
 
 pub const FloatingPointFields = struct {
     optional_float_field: ?f32 = null,
-    required_float_field: f32,
+    required_float_field: f32 = 0,
     repeated_float_field: ArrayListU(f32) = .{},
     default_float_field: ?f32 = 2,
     optional_double_field: ?f64 = null,
-    required_double_field: f64,
+    required_double_field: f64 = 0,
     repeated_double_field: ArrayListU(f64) = .{},
     default_double_field: ?f64 = 2,
 
@@ -289,7 +289,7 @@ pub const TestMessageWithOneof = struct {
             .pone = fd(3, .String),
             .pthree = fd(5, .String),
         };
-    },
+    } = null,
     recursive_oneof: ?union(enum) {
         rone: *const TestMessageWithOneof,
         rtwo: ManagedString,
@@ -297,7 +297,7 @@ pub const TestMessageWithOneof = struct {
             .rone = fd(6, .{ .AllocMessage = {} }),
             .rtwo = fd(7, .String),
         };
-    },
+    } = null,
     default_oneof_a: ?union(enum) {
         aone: i32,
         atwo: i32,
@@ -305,7 +305,7 @@ pub const TestMessageWithOneof = struct {
             .aone = fd(10, .{ .Varint = .Simple }),
             .atwo = fd(11, .{ .Varint = .Simple }),
         };
-    },
+    } = null,
     default_oneof_b: ?union(enum) {
         bone: i32,
         btwo: i32,
@@ -313,7 +313,7 @@ pub const TestMessageWithOneof = struct {
             .bone = fd(12, .{ .Varint = .Simple }),
             .btwo = fd(13, .{ .Varint = .Simple }),
         };
-    },
+    } = null,
 
     pub const _desc_table = .{
         .normal_field = fd(8, .{ .Varint = .Simple }),

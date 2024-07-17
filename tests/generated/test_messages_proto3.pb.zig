@@ -195,7 +195,7 @@ pub const TestAllTypesProto3 = struct {
             .oneof_enum = fd(119, .{ .Varint = .Simple }),
             .oneof_null_value = fd(120, .{ .Varint = .Simple }),
         };
-    },
+    } = null,
 
     pub const _desc_table = .{
         .optional_int32 = fd(1, .{ .Varint = .Simple }),

@@ -224,7 +224,7 @@ pub const TestAllTypes = struct {
             .oneof_string = fd(113, .String),
             .oneof_bytes = fd(114, .String),
         };
-    },
+    } = null,
 
     pub const _desc_table = .{
         .optional_int32 = fd(1, .{ .Varint = .Simple }),
@@ -475,9 +475,9 @@ pub const TestNestedChildExtensionData = struct {
 };
 
 pub const TestRequired = struct {
-    a: i32,
+    a: i32 = 0,
     dummy2: ?i32 = null,
-    b: i32,
+    b: i32 = 0,
     dummy4: ?i32 = null,
     dummy5: ?i32 = null,
     dummy6: ?i32 = null,
@@ -507,7 +507,7 @@ pub const TestRequired = struct {
     dummy30: ?i32 = null,
     dummy31: ?i32 = null,
     dummy32: ?i32 = null,
-    c: i32,
+    c: i32 = 0,
     optional_foreign: ?*const ForeignMessage = null,
 
     pub const _desc_table = .{
@@ -716,7 +716,7 @@ pub const TestIsInitialized = struct {
     };
 
     pub const SubMessage = struct {
-        i: i32,
+        i: i32 = 0,
 
         pub const _desc_table = .{
             .i = fd(2, .{ .Varint = .Simple }),
@@ -1142,7 +1142,7 @@ pub const TestOneof = struct {
             .a = fd(5, .{ .Varint = .Simple }),
             .b = fd(6, .String),
         };
-    },
+    } = null,
 
     pub const _desc_table = .{
         .foo = fd(null, .{ .OneOf = std.meta.Child(std.meta.FieldType(@This(), .foo)) }),
@@ -1195,7 +1195,7 @@ pub const TestOneof2 = struct {
             .b = fd(10, .String),
             .foo_lazy_message = fd(11, .{ .AllocMessage = {} }),
         };
-    },
+    } = null,
     bar: ?union(enum) {
         bar_int: i32,
         bar_string: ManagedString,
@@ -1219,7 +1219,7 @@ pub const TestOneof2 = struct {
             .bar_string_piece_with_empty_default = fd(22, .String),
             .bar_bytes_with_empty_default = fd(23, .String),
         };
-    },
+    } = null,
 
     pub const _desc_table = .{
         .baz_int = fd(18, .{ .Varint = .Simple }),
@@ -1260,14 +1260,14 @@ pub const TestRequiredOneof = struct {
             .foo_string = fd(2, .String),
             .foo_message = fd(3, .{ .AllocMessage = {} }),
         };
-    },
+    } = null,
 
     pub const _desc_table = .{
         .foo = fd(null, .{ .OneOf = std.meta.Child(std.meta.FieldType(@This(), .foo)) }),
     };
 
     pub const NestedMessage = struct {
-        required_double: f64,
+        required_double: f64 = 0,
 
         pub const _desc_table = .{
             .required_double = fd(1, .{ .FixedInt = .I64 }),
@@ -1582,7 +1582,7 @@ pub const TestHugeFieldNumbers = struct {
             .oneof_string = fd(536870013, .String),
             .oneof_bytes = fd(536870014, .String),
         };
-    },
+    } = null,
 
     pub const _desc_table = .{
         .optional_int32 = fd(536870000, .{ .Varint = .Simple }),
