@@ -1,8 +1,10 @@
 const std = @import("std");
-const protobuf = @import("protobuf");
 const mem = std.mem;
 const Allocator = mem.Allocator;
 const testing = std.testing;
+
+const protobuf = @import("protobuf");
+
 const tests_oneof = @import("./generated/oneof.pb.zig");
 
 test "decode empty oneof must be null" {
@@ -11,11 +13,11 @@ test "decode empty oneof must be null" {
 
     try testing.expect(decoded.regular_field.isEmpty());
     try testing.expectEqual(decoded.enum_field, .UNSPECIFIED);
-    try testing.expectEqual(decoded.some_oneof, null);
+    try testing.expectEqual(decoded.some_oneof, .__pb_not_set__);
 }
 
 test "oneof encode/decode int" {
-    var demo = tests_oneof.OneofContainer.init();
+    var demo = tests_oneof.OneofContainer{};
 
     demo.some_oneof = .{ .a_number = 10 };
 
@@ -36,11 +38,11 @@ test "oneof encode/decode int" {
     var decoded = try tests_oneof.OneofContainer.decode(obtained, testing.allocator);
     defer decoded.deinit(testing.allocator);
 
-    try testing.expectEqual(demo.some_oneof.?.a_number, decoded.some_oneof.?.a_number);
+    try testing.expectEqual(demo.some_oneof.a_number, decoded.some_oneof.a_number);
 }
 
 test "oneof encode/decode enum" {
-    var demo = tests_oneof.OneofContainer.init();
+    var demo = tests_oneof.OneofContainer{};
 
     demo.some_oneof = .{ .enum_value = .SOMETHING2 };
 
@@ -61,11 +63,11 @@ test "oneof encode/decode enum" {
     var decoded = try tests_oneof.OneofContainer.decode(obtained, testing.allocator);
     defer decoded.deinit(testing.allocator);
 
-    try testing.expectEqual(demo.some_oneof.?.enum_value, decoded.some_oneof.?.enum_value);
+    try testing.expectEqual(demo.some_oneof.enum_value, decoded.some_oneof.enum_value);
 }
 
 test "oneof encode/decode string" {
-    var demo = tests_oneof.OneofContainer.init();
+    var demo = tests_oneof.OneofContainer{};
     demo.some_oneof = .{ .string_in_oneof = protobuf.ManagedString.static("123") };
 
     {
@@ -85,11 +87,11 @@ test "oneof encode/decode string" {
     var decoded = try tests_oneof.OneofContainer.decode(obtained, testing.allocator);
     defer decoded.deinit(testing.allocator);
 
-    try testing.expectEqualSlices(u8, demo.some_oneof.?.string_in_oneof.getSlice(), decoded.some_oneof.?.string_in_oneof.getSlice());
+    try testing.expectEqualSlices(u8, demo.some_oneof.string_in_oneof.getSlice(), decoded.some_oneof.string_in_oneof.getSlice());
 }
 
 test "oneof encode/decode submessage" {
-    var demo = tests_oneof.OneofContainer.init();
+    var demo = tests_oneof.OneofContainer{};
     demo.some_oneof = .{ .message_in_oneof = .{ .value = 1, .str = protobuf.ManagedString.static("123") } };
 
     {
@@ -109,18 +111,18 @@ test "oneof encode/decode submessage" {
     var decoded = try tests_oneof.OneofContainer.decode(obtained, testing.allocator);
     defer decoded.deinit(testing.allocator);
 
-    try testing.expectEqualSlices(u8, demo.some_oneof.?.message_in_oneof.str.getSlice(), decoded.some_oneof.?.message_in_oneof.str.getSlice());
+    try testing.expectEqualSlices(u8, demo.some_oneof.message_in_oneof.str.getSlice(), decoded.some_oneof.message_in_oneof.str.getSlice());
 }
 
 test "decoding multiple messages keeps the last value 123" {
     const payload = &[_]u8{
-        // 1 some_oneof.?.enum_value
+        // 1 some_oneof.enum_value
         0x30, 0x02,
-        // 2 some_oneof.?.string_in_oneof
+        // 2 some_oneof.string_in_oneof
         0x0A, 0x03,
         0x31, 0x32,
         0x33,
-        // 3 demo.some_oneof.?.message_in_oneof
+        // 3 demo.some_oneof.message_in_oneof
         0x12,
         0x07, 0x08,
         0x01, 0x12,
@@ -131,7 +133,7 @@ test "decoding multiple messages keeps the last value 123" {
     var decoded = try tests_oneof.OneofContainer.decode(payload, testing.allocator);
     defer decoded.deinit(testing.allocator);
 
-    try testing.expectEqualSlices(u8, "123", decoded.some_oneof.?.message_in_oneof.str.getSlice());
+    try testing.expectEqualSlices(u8, "123", decoded.some_oneof.message_in_oneof.str.getSlice());
 }
 
 test "decoding multiple messages keeps the last value 132" {
@@ -139,17 +141,17 @@ test "decoding multiple messages keeps the last value 132" {
     // freed from memory preventing leaks
 
     const payload = &[_]u8{
-        // 1 some_oneof.?.enum_value
+        // 1 some_oneof.enum_value
         0x30, 0x02,
 
-        // 3 demo.some_oneof.?.message_in_oneof
+        // 3 demo.some_oneof.message_in_oneof
         0x12, 0x07,
         0x08, 0x01,
         0x12, 0x03,
         0x31, 0x32,
         0x33,
 
-        // 2 some_oneof.?.string_in_oneof
+        // 2 some_oneof.string_in_oneof
         0x0A,
         0x03, 0x31,
         0x32, 0x33,
@@ -158,5 +160,5 @@ test "decoding multiple messages keeps the last value 132" {
     var decoded = try tests_oneof.OneofContainer.decode(payload, testing.allocator);
     defer decoded.deinit(testing.allocator);
 
-    try testing.expectEqualSlices(u8, "123", decoded.some_oneof.?.string_in_oneof.getSlice());
+    try testing.expectEqualSlices(u8, "123", decoded.some_oneof.string_in_oneof.getSlice());
 }

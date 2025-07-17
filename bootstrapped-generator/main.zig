@@ -227,7 +227,7 @@ const GenerationContext = struct {
 
     fn escapeName(name: string) !string {
         if (std.zig.Token.keywords.get(name) != null)
-            return try std.fmt.allocPrint(allocator, "@\"{?s}\"", .{name})
+            return try std.fmt.allocPrint(allocator, "@\"{s}\"", .{name})
         else
             return name;
     }
@@ -660,7 +660,11 @@ const GenerationContext = struct {
                 const union_element_count = ctx.amountOfElementsInOneofUnion(m, @as(i32, @intCast(i)));
                 if (union_element_count > 1) {
                     const oneof_name = oneof.name.?.getSlice();
-                    try list.append(try std.fmt.allocPrint(allocator, "    {s}: ?union(enum) {{\n", .{try escapeName(oneof_name)}));
+                    try list.append(try std.fmt.allocPrint(allocator,
+                        \\    {s}: union(enum) {{
+                        \\       __pb_not_set__: void,
+                        \\
+                    , .{try escapeName(oneof_name)}));
 
                     for (m.field.items) |field| {
                         const f: descriptor.FieldDescriptorProto = field;
@@ -685,7 +689,7 @@ const GenerationContext = struct {
 
                     try list.append(
                         \\      };
-                        \\    },
+                        \\    } = .__pb_not_set__,
                         \\
                     );
                 }
@@ -711,7 +715,9 @@ const GenerationContext = struct {
                 const union_element_count = ctx.amountOfElementsInOneofUnion(m, @as(i32, @intCast(i)));
                 if (union_element_count > 1) {
                     const oneof_name = oneof.name.?.getSlice();
-                    try list.append(try std.fmt.allocPrint(allocator, "    .{s} = fd(null, .{{ .OneOf = std.meta.Child(std.meta.FieldType(@This(), .{s})) }}),\n", .{ oneof_name, oneof_name }));
+                    try list.append(try std.fmt.allocPrint(allocator,
+                        \\    .{s} = fd(null, .{{ .OneOf = @FieldType(@This(), "{s}") }}),
+                    , .{ oneof_name, oneof_name }));
                 }
             }
 

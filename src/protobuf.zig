@@ -368,9 +368,13 @@ fn append(pb: *Writer, comptime field: FieldDescriptor, value: anytype, comptime
 
     // TODO: review semantics of default-value in regards to wire protocol
     const is_default_scalar_value = switch (@typeInfo(@TypeOf(value))) {
-        .optional => value == null,
+        .optional => {
+            @compileLog(value);
+            @compileError("Unexpected optional in pb generated code");
+        },
         // as per protobuf spec, the first element of the enums must be 0 and it is the default value
         .@"enum" => @intFromEnum(value) == 0,
+        .@"union" => @hasField(@TypeOf(value), "__pb_not_set__") and value == .__pb_not_set__,
         else => switch (@TypeOf(value)) {
             bool => value == false,
             i32, u32, i64, u64, f32, f64 => value == 0,
@@ -451,13 +455,12 @@ fn append(pb: *Writer, comptime field: FieldDescriptor, value: anytype, comptime
             }
         },
         .OneOf => |union_type| {
-            // iterate over union tags until one matches `active_union_tag` and then use the comptime information to append the value
-            const active_union_tag = @tagName(value);
-            inline for (@typeInfo(@TypeOf(union_type._union_desc)).@"struct".fields) |union_field| {
-                if (std.mem.eql(u8, union_field.name, active_union_tag)) {
-                    try append(pb, @field(union_type._union_desc, union_field.name), @field(value, union_field.name), force_append);
-                }
-            }
+            return switch (value) {
+                .__pb_not_set__ => return,
+                inline else => |union_value, tag| {
+                    try append(pb, @field(union_type._union_desc, @tagName(tag)), union_value, force_append);
+                },
+            };
         },
     }
 }
@@ -516,7 +519,8 @@ pub fn pb_init(comptime T: type) T {
                     @field(value, field.name) = get_field_default_value(field.type);
                 }
             },
-            .AllocMessage, .SubMessage, .OneOf => {
+            .OneOf => @field(value, field.name) = .__pb_not_set__,
+            .AllocMessage, .SubMessage => {
                 @field(value, field.name) = null;
             },
             .List, .PackedList => {
@@ -604,21 +608,17 @@ fn dupe_field(original: anytype, comptime field_name: []const u8, comptime ftype
             },
             else => @compileLog("dupe_field", ftype, field_name, T),
         },
-        .OneOf => |one_of| {
+        .OneOf => |UnionType| {
             // if the value is set, inline-iterate over the possible OneOfs
-            if (@field(original, field_name)) |union_value| {
-                const active = @tagName(union_value);
-                inline for (@typeInfo(@TypeOf(one_of._union_desc)).@"struct".fields) |union_field| {
-                    // and if one matches the actual tagName of the union
-                    if (std.mem.eql(u8, union_field.name, active)) {
-                        // deinit the current value
-                        const value = try dupe_field(union_value, union_field.name, @field(one_of._union_desc, union_field.name).ftype, allocator);
-
-                        return @unionInit(one_of, union_field.name, value);
-                    }
-                }
-            }
-            return null;
+            const union_value = @field(original, field_name);
+            return switch (union_value) {
+                .__pb_not_set__ => .__pb_not_set__,
+                inline else => |_, tag| @unionInit(
+                    UnionType,
+                    @tagName(tag),
+                    try dupe_field(union_value, @tagName(tag), @field(UnionType._union_desc, @tagName(tag)).ftype, allocator),
+                ),
+            };
         },
     };
 }
@@ -700,8 +700,8 @@ fn deinit_field(T: type, ftype: FieldType, allocator: std.mem.Allocator, field: 
         },
         .OneOf => |union_type| {
             // if the value is set, inline-iterate over the possible OneOfs
-            if (field.* == null) return;
-            switch (field.*.?) {
+            switch (field.*) {
+                .__pb_not_set__ => return,
                 inline else => |*union_value, tag| {
                     const UnionT = @TypeOf(union_value.*);
                     deinit_field(UnionT, @field(union_type._union_desc, @tagName(tag)).ftype, allocator, union_value);
@@ -1105,7 +1105,7 @@ fn decode_data(comptime T: type, comptime field_desc: FieldDescriptor, comptime 
             // 1. creates a compile time for iterating over all `one_of._union_desc` fields
             // 2. when a match is found, it creates the union value in the `field.name` property of the struct `result`. breaks the for at that point
             const desc_union = one_of._union_desc;
-            inline for (@typeInfo(one_of).@"union".fields) |union_field| {
+            inline for (@typeInfo(one_of).@"union".fields[1..]) |union_field| {
                 const v = @field(desc_union, union_field.name);
                 if (is_tag_known(v, extracted_data)) {
                     // deinit the current value of the enum to prevent leaks
@@ -1284,7 +1284,7 @@ fn parseStructField(
                 },
             };
 
-            inline for (union_info.fields) |union_field| {
+            inline for (union_info.fields[1..]) |union_field| {
                 // snake_case comparison
                 var this_field = std.mem.eql(u8, union_field.name, field_name);
                 if (!this_field) {
@@ -1520,7 +1520,7 @@ fn stringify_struct_field(
             }
 
             try jws.beginObject();
-            inline for (union_info.fields) |union_field| {
+            inline for (union_info.fields[1..]) |union_field| {
                 if (value == @field(
                     union_info.tag_type.?,
                     union_field.name,
